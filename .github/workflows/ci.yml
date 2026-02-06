@@ -1,0 +1,133 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "claude/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Python tests
+  # ---------------------------------------------------------------------------
+  test-python:
+    name: Python Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Lint with ruff
+        run: |
+          ruff check examples/ tests/
+          ruff format --check examples/ tests/
+
+      - name: Type check with mypy
+        run: mypy examples/orchestrator.py --ignore-missing-imports
+
+      - name: Run pytest
+        run: pytest tests/test_orchestrator.py -v --tb=short
+
+  # ---------------------------------------------------------------------------
+  # TypeScript tests
+  # ---------------------------------------------------------------------------
+  test-typescript:
+    name: TypeScript Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ["20", "22"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Run vitest
+        run: npx vitest run tests/orchestrator.test.ts
+
+  # ---------------------------------------------------------------------------
+  # Validate project structure and skills
+  # ---------------------------------------------------------------------------
+  validate-structure:
+    name: Validate Project Structure
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check required files exist
+        run: |
+          echo "Checking required project files..."
+          files=(
+            "CLAUDE.md"
+            "README.md"
+            "package.json"
+            "pyproject.toml"
+            ".gitignore"
+            "examples/orchestrator.ts"
+            "examples/orchestrator.py"
+            "examples/sample-data.json"
+            ".claude/skills/orchestrate-json-scan.md"
+            ".claude/skills/scan-json-keys.md"
+            "docs/orchestrator-subagents.md"
+            "docs/json-key-scanner-example.md"
+          )
+          missing=0
+          for f in "${files[@]}"; do
+            if [ ! -f "$f" ]; then
+              echo "MISSING: $f"
+              missing=$((missing + 1))
+            else
+              echo "OK:      $f"
+            fi
+          done
+          if [ $missing -gt 0 ]; then
+            echo "ERROR: $missing required file(s) missing"
+            exit 1
+          fi
+          echo "All required files present."
+
+      - name: Validate sample-data.json is valid JSON
+        run: python -c "import json; json.load(open('examples/sample-data.json'))"
+
+      - name: Validate skill files have YAML frontmatter
+        run: |
+          for skill in .claude/skills/*.md; do
+            echo "Checking $skill..."
+            head -1 "$skill" | grep -q "^---" || {
+              echo "ERROR: $skill missing YAML frontmatter"
+              exit 1
+            }
+            echo "OK: $skill has frontmatter"
+          done
+
+      - name: Validate CLAUDE.md exists and is non-empty
+        run: |
+          if [ ! -s "CLAUDE.md" ]; then
+            echo "ERROR: CLAUDE.md is empty or missing"
+            exit 1
+          fi
+          echo "CLAUDE.md is present and non-empty ($(wc -l < CLAUDE.md) lines)"
