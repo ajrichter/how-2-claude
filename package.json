@@ -1,0 +1,17 @@
+{
+  "name": "how-2-claude",
+  "version": "0.1.0",
+  "description": "Reference repo for Claude Code orchestrator/subagent patterns",
+  "type": "module",
+  "scripts": {
+    "scan": "tsx examples/orchestrator.ts",
+    "test": "echo \"No tests yet\""
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.1.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  }
+}
