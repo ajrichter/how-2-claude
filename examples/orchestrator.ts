@@ -12,9 +12,9 @@
  *   npm install @anthropic-ai/claude-agent-sdk
  */
 
-import { query, type MessageStream } from "@anthropic-ai/claude-agent-sdk";
-import * as fs from "fs";
-import * as path from "path";
+import { query } from "@anthropic-ai/claude-agent-sdk";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -90,7 +90,7 @@ async function main() {
     const prompt = buildScannerPrompt(batch, searchDir);
 
     // Each call to query() creates an independent subagent
-    const stream: MessageStream = query({
+    const stream = query({
       prompt,
       options: {
         maxTurns: 10,

@@ -4,7 +4,7 @@ This file is automatically loaded into Claude Code's system prompt when working 
 
 ## Project Purpose
 
-`how-2-claude` is a reference repository demonstrating how to use Claude Code's orchestrator/subagent patterns to build multi-agent workflows. The primary use case is a **JSON key scanner** that fans out work to parallel subagents and merges results.
+`how-2-claude` is a reference repository demonstrating how to use Claude Code's orchestrator/subagent patterns to build multi-agent workflows. The primary use case is a **JSON key scanner** that fans out work to parallel subagents and merges results. Examples are provided in both **TypeScript** and **Python**.
 
 ## Repository Structure
 
@@ -12,6 +12,10 @@ This file is automatically loaded into Claude Code's system prompt when working 
 how-2-claude/
 ├── CLAUDE.md                          # This file (loaded into Claude's context)
 ├── README.md                          # Project overview
+├── package.json                       # Node.js deps + scripts
+├── pyproject.toml                     # Python deps + tool config
+├── tsconfig.json                      # TypeScript config
+├── .gitignore
 ├── docs/
 │   ├── orchestrator-subagents.md      # How orchestrator + subagents work
 │   └── json-key-scanner-example.md    # Concrete example: JSON key scanner
@@ -20,9 +24,15 @@ how-2-claude/
 │       ├── orchestrate-json-scan.md   # Skill: orchestrate the JSON scan
 │       └── scan-json-keys.md          # Skill: scan for key usage (subagent)
 ├── examples/
-│   ├── orchestrator.ts                # TypeScript orchestrator using Agent SDK
+│   ├── orchestrator.ts                # TypeScript orchestrator (Agent SDK)
+│   ├── orchestrator.py                # Python orchestrator (Agent SDK)
 │   └── sample-data.json               # Sample JSON for testing
-└── .gitignore
+├── tests/
+│   ├── orchestrator.test.ts           # TypeScript tests (vitest)
+│   └── test_orchestrator.py           # Python tests (pytest)
+└── .github/
+    └── workflows/
+        └── ci.yml                     # CI: lint, typecheck, test (both langs)
 ```
 
 ## Key Concepts
@@ -45,21 +55,36 @@ When multiple subagents need to write to a shared output file, the orchestrator 
 ## Commands
 
 ```bash
-# Install dependencies (for TypeScript examples)
-npm install
+# --- TypeScript ---
+npm install                              # Install Node.js deps
+npx tsx examples/orchestrator.ts         # Run the TS orchestrator
+npm run test:ts                          # Run TS tests (vitest)
+npm run typecheck                        # Type check with tsc
 
-# Run the orchestrator example
-npx tsx examples/orchestrator.ts
+# --- Python ---
+pip install -e ".[dev]"                  # Install Python deps
+python examples/orchestrator.py          # Run the Python orchestrator
+npm run test:py                          # Run Python tests (pytest)
+npm run lint:py                          # Lint + format check (ruff)
 
-# Run tests
-npm test
+# --- Both ---
+npm test                                 # Run all vitest tests
+npm run ci                               # Full TS CI (typecheck + test)
 ```
+
+## CI/CD
+
+GitHub Actions runs on every push to `main` or `claude/**` branches and on PRs to `main`:
+- **test-python**: pytest on Python 3.11 + 3.12, ruff lint/format, mypy type check
+- **test-typescript**: vitest on Node 20 + 22, tsc type check
+- **validate-structure**: verifies all required files exist, JSON is valid, skills have frontmatter
 
 ## Conventions
 
-- Use TypeScript for all example code
+- TypeScript and Python examples side by side for the same pattern
 - Skills use markdown with YAML frontmatter
 - Documentation lives in `docs/`
 - Keep subagent prompts focused and specific -- one task per subagent
 - Subagents should return structured data (JSON), not prose
 - The orchestrator is the only agent that writes to shared output files
+- Tests cover core logic (chunk, extract, merge) without calling the Agent SDK
